@@ -1,16 +1,14 @@
 # Laravel Valet /dist/ Driver
 
-Custom `npm run serve` driver for [Laravel Valet](https://laravel.com/docs/master/valet).
+Custom `vue-cli-service serve` driver for [Laravel Valet](https://laravel.com/docs/master/valet).
 
 ## What is this?
 
 This is a custom driver to automatically run the server specified by `serve` in your `package.json scripts`.
 
-Compatible with Vue, Webpack and many more.
-
-> Static files should be put in the `public` folder of your root directory.
+To work effectively, this driver relies on the defaults provided by Vue CLI 3+.
 
 ## Installation
 
-1. `git clone https://github.com/morrislaptop/NpmRunServeValetDriver.git ~/.valet/Drivers/NpmRunServeValetDriver`.
+1. Copy `VueServeValetDriver.php into your ~/.valet/Drivers` directory.
 2. Done :)

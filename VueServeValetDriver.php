@@ -1,6 +1,6 @@
 <?php
 
-class NpmRunServeValetDriver extends ValetDriver
+class VueServeValetDriver extends ValetDriver
 {
     /**
      * Holds the full path to the site
