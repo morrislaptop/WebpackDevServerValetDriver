@@ -152,10 +152,12 @@ class VueServeValetDriver extends ValetDriver
     {
         $page = $this->getFromDevServer($uri);
 
-        $page = str_replace('/app.js', "//{$this->devServerHost}:{$this->port}/app.js", $page);
+        $content = str_replace('/app.js', "//{$this->devServerHost}:{$this->port}/app.js", $page['content']);
 
         $tmp = tempnam(sys_get_temp_dir(), 'valet');
-        file_put_contents($tmp, $page);
+        file_put_contents($tmp, $content);
+
+        array_map('header', $page['headers']);
         
         return $tmp;
     }
@@ -163,16 +165,10 @@ class VueServeValetDriver extends ValetDriver
     protected function getFromDevServer($uri)
     {
         $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
+
+        $context = stream_context_create(['http' => ['header' => 'Accept: */*']]);
+        $content = file_get_contents($uri, false, $context);
         
-        $ch = curl_init($uri);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-        curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)");
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 2); 
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        $content = curl_exec($ch);
-        curl_close($ch);
-        
-        return $content;
+        return ['content' => $content, 'headers' => $http_response_header];
     }
 }
