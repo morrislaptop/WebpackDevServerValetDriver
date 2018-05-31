@@ -1,6 +1,6 @@
 <?php
 
-class ServeValetDriver extends ValetDriver
+class NpmRunServeValetDriver extends ValetDriver
 {
     protected $sitePath;
     protected $siteName;
