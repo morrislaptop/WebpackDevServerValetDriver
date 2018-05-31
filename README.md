@@ -8,6 +8,8 @@ This is a custom driver to automatically run the server specified by `serve` in 
 
 Compatible with Vue, Webpack and many more.
 
+> Static files should be put in the `public` folder of your root directory.
+
 ## Installation
 
 1. `git clone https://github.com/morrislaptop/NpmRunServeValetDriver.git ~/.valet/Drivers/NpmRunServeValetDriver`.

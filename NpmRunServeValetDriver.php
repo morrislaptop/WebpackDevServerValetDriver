@@ -2,9 +2,41 @@
 
 class NpmRunServeValetDriver extends ValetDriver
 {
+    /**
+     * Holds the full path to the site
+     */
     protected $sitePath;
+
+    /**
+     * Holds the domain name
+     */
     protected $siteName;
+
+    /**
+     * Holds the port associated to $siteName
+     */
     protected $port;
+
+    /**
+     * Holds the URL to the dev server in background
+     */
+    protected $devServerHost = '127.0.0.1';
+
+    /**
+     * The script used to start the server
+     */
+    protected $runner = 'yarn serve --port %s';
+
+    /**
+     * Interval of seconds to check if the server
+     * has booted up.
+     */
+    protected $sleep = 3;
+
+    /**
+     * Output to local debug file or /dev/null
+     */
+    protected $debug = false;
 
     /**
      * Determine if the driver serves the request.
@@ -20,14 +52,14 @@ class NpmRunServeValetDriver extends ValetDriver
         $this->siteName = $siteName;
         $this->port = $this->getPort();
 
-        if (! $this->isVueSite()) return false;
+        if (! $this->isNpmRunServeSite()) return false;
 
         if (! $this->isServerRunning()) $this->startServer();
 
         return true;
     }
 
-    protected function isVueSite()
+    protected function isNpmRunServeSite()
     {
         $path = $this->sitePath . '/package.json';
 
@@ -49,21 +81,37 @@ class NpmRunServeValetDriver extends ValetDriver
     /**
      * Starts the node server by running the serve
      * command.
-     * 
-     * @todo Wait until app starts serving...
      */
     protected function startServer()
     {
         chdir($this->sitePath);
 
         putenv('PATH=/usr/local/bin');
-        $process = new BackgroundProcess("yarn serve --port 1036 --public http://localhost:1036 --publicPath http://localhost:1036 --host 0.0.0.0");
 
-        $process->run(__DIR__ . '/out', true);
+        $command = sprintf($this->runner, $this->port);
+        $append = false;
+        $outputFile = $this->debug ? __DIR__ . '/debug' : '/dev/null';
 
-        sleep(5);
+        $cmd = sprintf('%s %s %s 2>&1 & echo $!', $command, ($append) ? '>>' : '>', $outputFile);
+        // var_dump($cmd); exit;
+        shell_exec($cmd);
+
+        $this->waitForServerToStart();
     }
 
+    /**
+     * Blocks execution until the server is handling requests.
+     */
+    protected function waitForServerToStart()
+    {
+        while (!$this->isServerRunning()) {
+            sleep($this->sleep);
+        }
+    }
+
+    /**
+     * Returns true if the server is already running.
+     */
     protected function isServerRunning()
     {
         $fp = @fsockopen('127.0.0.1', $this->port, $errno, $errstr, 0.1);
@@ -102,201 +150,14 @@ class NpmRunServeValetDriver extends ValetDriver
      */
     public function frontControllerPath($sitePath, $siteName, $uri)
     {
-        $uri = "http://localhost:$this->port$uri";
+        $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
         $page = file_get_contents($uri);
 
-        $page = str_replace('/app.js', '//localhost:1036/app.js', $page);
+        $page = str_replace('/app.js', "//{$this->devServerHost}:{$this->port}/app.js", $page);
 
         $tmp = tempnam(sys_get_temp_dir(), 'valet');
         file_put_contents($tmp, $page);
         
         return $tmp;
-    }
-}
-
-/**
- * This file is part of cocur/background-process.
- *
- * (c) 2013-2015 Florian Eckerstorfer
- */
-
-/**
- * BackgroundProcess.
- *
- * Runs a process in the background.
- *
- * @author    Florian Eckerstorfer <florian@eckerstorfer.co>
- * @copyright 2013-2015 Florian Eckerstorfer
- * @license   http://opensource.org/licenses/MIT The MIT License
- * @link      https://florian.ec/articles/running-background-processes-in-php/ Running background processes in PHP
- */
-class BackgroundProcess
-{
-    const OS_WINDOWS = 1;
-    const OS_NIX = 2;
-    const OS_OTHER = 3;
-
-    /**
-     * @var string
-     */
-    private $command;
-
-    /**
-     * @var int
-     */
-    private $pid;
-
-    /**
-     * @var int
-     */
-    protected $serverOS;
-
-    /**
-     * @param string $command The command to execute
-     *
-     * @codeCoverageIgnore
-     */
-    public function __construct($command = null)
-    {
-        $this->command = $command;
-        $this->serverOS = $this->getOS();
-    }
-
-    /**
-     * Runs the command in a background process.
-     *
-     * @param string $outputFile File to write the output of the process to; defaults to /dev/null
-     *                           currently $outputFile has no effect when used in conjunction with a Windows server
-     * @param bool $append - set to true if output should be appended to $outputfile
-     */
-    public function run($outputFile = '/dev/null', $append = false)
-    {
-        if ($this->command === null) {
-            return;
-        }
-
-        switch ($this->getOS()) {
-            case self::OS_WINDOWS:
-                shell_exec(sprintf('%s &', $this->command, $outputFile));
-                break;
-            case self::OS_NIX:
-                $this->pid = (int)shell_exec(sprintf('%s %s %s 2>&1 & echo $!', $this->command, ($append) ? '>>' : '>', $outputFile));
-                break;
-            default:
-                throw new RuntimeException(sprintf(
-                    'Could not execute command "%s" because operating system "%s" is not supported by ' .
-                        'Cocur\BackgroundProcess.',
-                    $this->command,
-                    PHP_OS
-                ));
-        }
-    }
-
-    /**
-     * Returns if the process is currently running.
-     *
-     * @return bool TRUE if the process is running, FALSE if not.
-     */
-    public function isRunning()
-    {
-        $this->checkSupportingOS('Cocur\BackgroundProcess can only check if a process is running on *nix-based ' .
-            'systems, such as Unix, Linux or Mac OS X. You are running "%s".');
-
-        try {
-            $result = shell_exec(sprintf('ps %d 2>&1', $this->pid));
-            if (count(preg_split("/\n/", $result)) > 2 && !preg_match('/ERROR: Process ID out of range/', $result)) {
-                return true;
-            }
-        } catch (Exception $e) {
-        }
-
-        return false;
-    }
-
-    /**
-     * Stops the process.
-     *
-     * @return bool `true` if the processes was stopped, `false` otherwise.
-     */
-    public function stop()
-    {
-        $this->checkSupportingOS('Cocur\BackgroundProcess can only stop a process on *nix-based systems, such as ' .
-            'Unix, Linux or Mac OS X. You are running "%s".');
-
-        try {
-            $result = shell_exec(sprintf('kill %d 2>&1', $this->pid));
-            if (!preg_match('/No such process/', $result)) {
-                return true;
-            }
-        } catch (Exception $e) {
-        }
-
-        return false;
-    }
-
-    /**
-     * Returns the ID of the process.
-     *
-     * @return int The ID of the process
-     */
-    public function getPid()
-    {
-        $this->checkSupportingOS('Cocur\BackgroundProcess can only return the PID of a process on *nix-based systems, ' .
-            'such as Unix, Linux or Mac OS X. You are running "%s".');
-
-        return $this->pid;
-    }
-
-    /**
-     * Set the process id.
-     *
-     * @param $pid
-     */
-    protected function setPid($pid)
-    {
-        $this->pid = $pid;
-    }
-
-    /**
-     * @return int
-     */
-    protected function getOS()
-    {
-        $os = strtoupper(PHP_OS);
-
-        if (substr($os, 0, 3) === 'WIN') {
-            return self::OS_WINDOWS;
-        } else if ($os === 'LINUX' || $os === 'FREEBSD' || $os === 'DARWIN') {
-            return self::OS_NIX;
-        }
-
-        return self::OS_OTHER;
-    }
-
-    /**
-     * @param string $message Exception message if the OS is not supported
-     *
-     * @throws RuntimeException if the operating system is not supported by Cocur\BackgroundProcess
-     *
-     * @codeCoverageIgnore
-     */
-    protected function checkSupportingOS($message)
-    {
-        if ($this->getOS() !== self::OS_NIX) {
-            throw new RuntimeException(sprintf($message, PHP_OS));
-        }
-    }
-
-    /**
-     * @param int $pid PID of process to resume
-     *
-     * @return Cocur\BackgroundProcess\BackgroundProcess
-     */
-    static public function createFromPID($pid)
-    {
-        $process = new self();
-        $process->setPid($pid);
-
-        return $process;
     }
 }
