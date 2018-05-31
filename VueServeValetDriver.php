@@ -150,8 +150,7 @@ class VueServeValetDriver extends ValetDriver
      */
     public function frontControllerPath($sitePath, $siteName, $uri)
     {
-        $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
-        $page = file_get_contents($uri);
+        $page = $this->getFromDevServer($uri);
 
         $page = str_replace('/app.js', "//{$this->devServerHost}:{$this->port}/app.js", $page);
 
@@ -159,5 +158,21 @@ class VueServeValetDriver extends ValetDriver
         file_put_contents($tmp, $page);
         
         return $tmp;
+    }
+
+    protected function getFromDevServer($uri)
+    {
+        $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
+        
+        $ch = curl_init($uri);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)");
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 2); 
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $content = curl_exec($ch);
+        curl_close($ch);
+        
+        return $content;
     }
 }
