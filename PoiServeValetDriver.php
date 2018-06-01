@@ -2,20 +2,20 @@
 
 require_once __DIR__ . '/BaseServeDriver.php';
 
-class VueServeValetDriver extends BaseServeDriver
+class PoiServeValetDriver extends BaseServeDriver
 {
     protected function getRunner() {
-        return 'yarn serve --port %s';
+        return 'yarn dev --port %s';
     }
 
     protected function getStaticFolder()
     {
-        return 'public';
+        return 'static';
     }
 
     protected function getDevDependency()
     {
-        return '@vue/cli-service';
+        return 'poi';
     }
 
     protected function filterDevContent($content)
