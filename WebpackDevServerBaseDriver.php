@@ -103,10 +103,41 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         $this->siteName = $siteName;
         $this->port = $this->getPort();
 
-        if (! $this->isNodeServeSite()) return false;
+        if (! $this->isWebpackDevServerSite()) return false;
 
-        if ($this->isSockJsRequest($uri)) return false;
+        return true;
+    }
 
+    /**
+     * Determine if the incoming request is for a static file.
+     *
+     * @param  string  $sitePath
+     * @param  string  $siteName
+     * @param  string  $uri
+     * @return string|false
+     */
+    public function isStaticFile($sitePath, $siteName, $uri)
+    {
+        $folder = $this->getStaticFolder();
+
+        if (file_exists($staticFilePath = "$sitePath/$folder/$uri")) {
+            $this->log("Static file: $uri");
+            return $staticFilePath;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the fully resolved path to the application's front controller.
+     *
+     * @param  string  $sitePath
+     * @param  string  $siteName
+     * @param  string  $uri
+     * @return string
+     */
+    public function frontControllerPath($sitePath, $siteName, $uri)
+    {
         if ($this->wantsToRestart($uri)) {
             $this->stopServer();
             header("Location: $uri");
@@ -115,14 +146,23 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
         if (! $this->isServerRunning()) $this->startServer();
 
-        return true;
+        $page = $this->getFromDevServer($uri);
+
+        $content = $this->filterDevContent($page['content']);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'valet');
+        file_put_contents($tmp, $content);
+
+        array_map('header', $page['headers']);
+        
+        return $tmp;
     }
 
     protected function isSockJsRequest($uri) {
         return strpos($uri, 'sockjs-node') !== false;
     }
 
-    protected function isNodeServeSite()
+    protected function isWebpackDevServerSite()
     {
         $path = $this->sitePath . '/package.json';
 
@@ -288,47 +328,6 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     }
 
     /**
-     * Determine if the incoming request is for a static file.
-     *
-     * @param  string  $sitePath
-     * @param  string  $siteName
-     * @param  string  $uri
-     * @return string|false
-     */
-    public function isStaticFile($sitePath, $siteName, $uri)
-    {
-        $folder = $this->getStaticFolder();
-
-        if (file_exists($staticFilePath = "$sitePath/$folder/$uri")) {
-            return $staticFilePath;
-        }
-
-        return false;
-    }
-
-    /**
-     * Get the fully resolved path to the application's front controller.
-     *
-     * @param  string  $sitePath
-     * @param  string  $siteName
-     * @param  string  $uri
-     * @return string
-     */
-    public function frontControllerPath($sitePath, $siteName, $uri)
-    {
-        $page = $this->getFromDevServer($uri);
-
-        $content = $this->filterDevContent($page['content']);
-
-        $tmp = tempnam(sys_get_temp_dir(), 'valet');
-        file_put_contents($tmp, $content);
-
-        array_map('header', $page['headers']);
-        
-        return $tmp;
-    }
-
-    /**
      * Get response from the dev server.
      */
     protected function getFromDevServer($uri)
@@ -336,7 +335,11 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
 
         $context = stream_context_create(['http' => ['header' => 'Accept: */*']]);
-        $content = file_get_contents($uri, false, $context);
+        $content = @file_get_contents($uri, false, $context);
+
+        if (!$content) {
+            throw new Exception('Failed to get page from dev server');
+        }
         
         return ['content' => $content, 'headers' => $http_response_header];
     }
