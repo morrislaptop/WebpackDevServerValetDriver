@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
+require_once __DIR__.'/WebpackDevServerBaseDriver.php';
 
 class LaravelMixValetDriver extends WebpackDevServerBaseDriver
 {
@@ -14,8 +14,9 @@ class LaravelMixValetDriver extends WebpackDevServerBaseDriver
     {
         $this->laravelDriver = new LaravelValetDriver();
     }
-    
-    protected function getRunner() {
+
+    protected function getRunner()
+    {
         return 'npm run hot -- --port %s';
     }
 
@@ -34,12 +35,11 @@ class LaravelMixValetDriver extends WebpackDevServerBaseDriver
         return $this->laravelDriver->isStaticFile($sitePath, $siteName, $uri);
     }
 
-
-    public function frontControllerPath($sitePath, $siteName, $uri) {
+    public function frontControllerPath($sitePath, $siteName, $uri)
+    {
         try {
             return parent::frontControllerPath($sitePath, $siteName, $uri);
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             return $this->laravelDriver->frontControllerPath($sitePath, $siteName, $uri);
         }
     }

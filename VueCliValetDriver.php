@@ -1,10 +1,11 @@
 <?php
 
-require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
+require_once __DIR__.'/WebpackDevServerBaseDriver.php';
 
 class VueCliValetDriver extends WebpackDevServerBaseDriver
 {
-    protected function getRunner() {
+    protected function getRunner()
+    {
         return 'npm run serve -- --port %s';
     }
 

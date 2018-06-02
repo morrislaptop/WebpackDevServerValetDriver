@@ -3,22 +3,22 @@
 abstract class WebpackDevServerBaseDriver extends ValetDriver
 {
     /**
-     * Holds the full path to the site
+     * Holds the full path to the site.
      */
     protected $sitePath;
 
     /**
-     * Holds the domain name
+     * Holds the domain name.
      */
     protected $siteName;
 
     /**
-     * Holds the port associated to $siteName
+     * Holds the port associated to $siteName.
      */
     protected $port;
 
     /**
-     * Holds the URL to the dev server in background
+     * Holds the URL to the dev server in background.
      */
     protected $devServerHost = '127.0.0.1';
 
@@ -31,28 +31,28 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Max number of intervals to wait for the server
      * to start.
-     * 
+     *
      * 20 times * 3 seconds = 60 seconds total
      */
     protected $maxIntervals = 3;
 
     /**
-     * Log file for debugging
+     * Log file for debugging.
      */
-    protected $log = __DIR__ . '/log';
+    protected $log = __DIR__.'/log';
 
     /**
-     * Log file for output
+     * Log file for output.
      */
-    protected $out = __DIR__ . '/out';
+    protected $out = __DIR__.'/out';
 
     /**
-     * File path to store site names to pids
+     * File path to store site names to pids.
      */
-    protected $pids = __DIR__ . '/pids.json';
+    protected $pids = __DIR__.'/pids.json';
 
     /**
-     * Folder which contains static assets
+     * Folder which contains static assets.
      */
     abstract protected function getStaticFolder();
 
@@ -62,39 +62,43 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     abstract protected function getRunner();
 
     /**
-     * Get the dev dependency to check for
+     * Get the dev dependency to check for.
      */
     abstract protected function getDevDependency();
 
     /**
-     * Get a regex to check the dev dependency version
+     * Get a regex to check the dev dependency version.
      */
-    protected function getDevDependencyVersionPattern() {
+    protected function getDevDependencyVersionPattern()
+    {
         return '/.*/';
     }
 
     /**
      * Modify the output from the dev server. Useful for pointing
-     * scripts directly to the dev server instead of proxying 
-     * through Valet. e.g. WebSockets
+     * scripts directly to the dev server instead of proxying
+     * through Valet. e.g. WebSockets.
      */
-    protected function filterDevContent($content) {
+    protected function filterDevContent($content)
+    {
         return $content;
     }
 
     /**
      * Add info to log file.
      */
-    protected function log($var) {
-        error_log((new DateTime)->format("y:m:d h:i:s") . ': ' . var_export($var, true) . "\n", 3, $this->log);
+    protected function log($var)
+    {
+        error_log((new DateTime())->format('y:m:d h:i:s').': '.var_export($var, true)."\n", 3, $this->log);
     }
 
     /**
      * Determine if the driver serves the request.
      *
-     * @param  string  $sitePath
-     * @param  string  $siteName
-     * @param  string  $uri
+     * @param string $sitePath
+     * @param string $siteName
+     * @param string $uri
+     *
      * @return bool
      */
     public function serves($sitePath, $siteName, $uri)
@@ -103,7 +107,9 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         $this->siteName = $siteName;
         $this->port = $this->getPort();
 
-        if (! $this->isWebpackDevServerSite()) return false;
+        if (!$this->isWebpackDevServerSite()) {
+            return false;
+        }
 
         return true;
     }
@@ -111,9 +117,10 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Determine if the incoming request is for a static file.
      *
-     * @param  string  $sitePath
-     * @param  string  $siteName
-     * @param  string  $uri
+     * @param string $sitePath
+     * @param string $siteName
+     * @param string $uri
+     *
      * @return string|false
      */
     public function isStaticFile($sitePath, $siteName, $uri)
@@ -122,6 +129,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
         if (file_exists($staticFilePath = "$sitePath/$folder/$uri")) {
             $this->log("Static file: $uri");
+
             return $staticFilePath;
         }
 
@@ -131,9 +139,10 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Get the fully resolved path to the application's front controller.
      *
-     * @param  string  $sitePath
-     * @param  string  $siteName
-     * @param  string  $uri
+     * @param string $sitePath
+     * @param string $siteName
+     * @param string $uri
+     *
      * @return string
      */
     public function frontControllerPath($sitePath, $siteName, $uri)
@@ -144,7 +153,9 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
             exit;
         }
 
-        if (! $this->isServerRunning()) $this->startServer();
+        if (!$this->isServerRunning()) {
+            $this->startServer();
+        }
 
         $page = $this->getFromDevServer($uri);
 
@@ -154,35 +165,42 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         file_put_contents($tmp, $content);
 
         array_map('header', $page['headers']);
-        
+
         return $tmp;
     }
 
-    protected function isSockJsRequest($uri) {
+    protected function isSockJsRequest($uri)
+    {
         return strpos($uri, 'sockjs-node') !== false;
     }
 
     protected function isWebpackDevServerSite()
     {
-        $path = $this->sitePath . '/package.json';
+        $path = $this->sitePath.'/package.json';
 
-        if (!file_exists($path)) return false;
+        if (!file_exists($path)) {
+            return false;
+        }
 
         $package = json_decode(file_get_contents($path));
-        
+
         $dep = $this->getDevDependency();
-        if (empty($package->devDependencies->$dep)) return false;
+        if (empty($package->devDependencies->$dep)) {
+            return false;
+        }
 
         $version = $this->getDevDependencyVersionPattern();
+
         return preg_match($version, $package->devDependencies->$dep);
     }
 
     /**
      * Returns true if a restart is wanted.
-     * 
+     *
      * Add restart=1 to the URL to return true
      */
-    protected function wantsToRestart() {
+    protected function wantsToRestart()
+    {
         return !empty($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'restart=1') !== false;
     }
 
@@ -195,7 +213,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     }
 
     /**
-     * Returns a port number based on the siteName
+     * Returns a port number based on the siteName.
      */
     protected function getPort()
     {
@@ -224,8 +242,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
         try {
             $this->waitForServerToStart($pid);
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             $this->stopProcess($pid);
 
             throw new Exception(file_get_contents($this->out), 0, $e);
@@ -234,7 +251,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
     /**
      * Blocks execution until the server is handling requests.
-     * 
+     *
      * @todo max wait
      * @todo Check process is running
      */
@@ -244,15 +261,16 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
         while (!$this->isServerRunning()) {
             $this->throwIfNotRunning($pid);
-            if ($count > $this->maxIntervals) throw new Exception('Timed out');
-
+            if ($count > $this->maxIntervals) {
+                throw new Exception('Timed out');
+            }
             sleep($this->sleepInterval);
             $count++;
         }
     }
 
     /**
-     * Returns the process id for current siteName
+     * Returns the process id for current siteName.
      */
     protected function getPid()
     {
@@ -262,12 +280,12 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     }
 
     /**
-     * Saves the process id for current siteName
+     * Saves the process id for current siteName.
      */
     protected function savePid($pid)
     {
         $data = [];
-        
+
         if (file_exists($this->pids)) {
             $data = json_decode(file_get_contents($this->pids), true);
         }
@@ -278,7 +296,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     }
 
     /**
-     * Checks if the process is still running
+     * Checks if the process is still running.
      */
     public function throwIfNotRunning($pid)
     {
@@ -287,8 +305,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
             if (count(preg_split("/\n/", $result)) > 2 && !preg_match('/ERROR: Process ID out of range/', $result)) {
                 return true;
             }
-        } 
-        catch (Exception $e) {
+        } catch (Exception $e) {
         }
 
         throw new Exception('Not running');
@@ -306,8 +323,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
             if (!preg_match('/No such process/', $result)) {
                 return true;
             }
-        } 
-        catch (Exception $e) {
+        } catch (Exception $e) {
         }
 
         return false;
@@ -320,10 +336,12 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     {
         $fp = @fsockopen('127.0.0.1', $this->port, $errno, $errstr, 0.1);
 
-        if (!$fp) return false;
+        if (!$fp) {
+            return false;
+        }
 
         fclose($fp);
-        
+
         return true;
     }
 
@@ -340,7 +358,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         if (!$content) {
             throw new Exception('Failed to get page from dev server');
         }
-        
+
         return ['content' => $content, 'headers' => $http_response_header];
     }
 }
