@@ -70,7 +70,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
      * Get a regex to check the dev dependency version
      */
     protected function getDevDependencyVersionPattern() {
-        return '/*/';
+        return '/.*/';
     }
 
     /**
@@ -139,7 +139,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
      * Add restart=1 to the URL to return true
      */
     protected function wantsToRestart() {
-        return strpos($_SERVER['REQUEST_URI'], 'restart=1') !== false;
+        return !empty($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], 'restart=1') !== false;
     }
 
     /**
