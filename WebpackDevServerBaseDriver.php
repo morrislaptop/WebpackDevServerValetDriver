@@ -1,6 +1,6 @@
 <?php
 
-abstract class BaseServeDriver extends ValetDriver
+abstract class WebpackDevServerBaseDriver extends ValetDriver
 {
     /**
      * Holds the full path to the site
@@ -67,6 +67,13 @@ abstract class BaseServeDriver extends ValetDriver
     abstract protected function getDevDependency();
 
     /**
+     * Get a regex to check the dev dependency version
+     */
+    protected function getDevDependencyVersionPattern() {
+        return '/*/';
+    }
+
+    /**
      * Modify the output from the dev server. Useful for pointing
      * scripts directly to the dev server instead of proxying 
      * through Valet. e.g. WebSockets
@@ -79,7 +86,7 @@ abstract class BaseServeDriver extends ValetDriver
      * Add info to log file.
      */
     protected function log($var) {
-        error_log(var_export($var, true) . "\n", 3, $this->log);
+        error_log((new DateTime)->format("y:m:d h:i:s") . ': ' . var_export($var, true) . "\n", 3, $this->log);
     }
 
     /**
@@ -98,11 +105,17 @@ abstract class BaseServeDriver extends ValetDriver
 
         if (! $this->isNodeServeSite()) return false;
 
+        if ($this->isSockJsRequest($uri)) return false;
+
         if ($this->wantsToRestart($uri)) $this->stopServer();
 
         if (! $this->isServerRunning()) $this->startServer();
 
         return true;
+    }
+
+    protected function isSockJsRequest($uri) {
+        return strpos($uri, 'sockjs-node') !== false;
     }
 
     protected function isNodeServeSite()
@@ -112,9 +125,12 @@ abstract class BaseServeDriver extends ValetDriver
         if (!file_exists($path)) return false;
 
         $package = json_decode(file_get_contents($path));
+        
         $dep = $this->getDevDependency();
+        if (empty($package->devDependencies->$dep)) return false;
 
-        return !empty($package->devDependencies->$dep);
+        $version = $this->getDevDependencyVersionPattern();
+        return preg_match($version, $package->devDependencies->$dep);
     }
 
     /**
