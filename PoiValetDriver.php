@@ -5,7 +5,7 @@ require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
 class PoiValetDriver extends WebpackDevServerBaseDriver
 {
     protected function getRunner() {
-        return 'yarn dev --port %s';
+        return 'npm run dev -- --port %s';
     }
 
     protected function getStaticFolder()
