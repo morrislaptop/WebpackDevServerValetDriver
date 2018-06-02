@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
 
-class VueCliServeValetDriver extends WebpackDevServerBaseDriver
+class VueCliValetDriver extends WebpackDevServerBaseDriver
 {
     protected function getRunner() {
         return 'yarn serve --port %s';
