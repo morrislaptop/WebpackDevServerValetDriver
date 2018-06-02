@@ -107,7 +107,11 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
         if ($this->isSockJsRequest($uri)) return false;
 
-        if ($this->wantsToRestart($uri)) $this->stopServer();
+        if ($this->wantsToRestart($uri)) {
+            $this->stopServer();
+            header("Location: $uri");
+            exit;
+        }
 
         if (! $this->isServerRunning()) $this->startServer();
 
