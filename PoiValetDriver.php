@@ -1,10 +1,11 @@
 <?php
 
-require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
+require_once __DIR__.'/WebpackDevServerBaseDriver.php';
 
 class PoiValetDriver extends WebpackDevServerBaseDriver
 {
-    protected function getRunner() {
+    protected function getRunner()
+    {
         return 'npm run dev -- --port %s';
     }
 
@@ -18,9 +19,10 @@ class PoiValetDriver extends WebpackDevServerBaseDriver
         return 'poi';
     }
 
-    protected function getDevDependencyVersionPattern() {
+    protected function getDevDependencyVersionPattern()
+    {
         return '/\^10/';
-      }
+    }
 
     protected function filterDevContent($content)
     {
