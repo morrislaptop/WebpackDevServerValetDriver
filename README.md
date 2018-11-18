@@ -10,7 +10,7 @@ This is a custom driver to automatically run the server specified by `serve` in 
 
 ## Installation
 
-1. Copy the `*.php` files into your `~/.valet/Drivers` directory.
+1. Copy the `*.php` files into your `~/.config/valet/Drivers` directory.
 2. Done :)
 
 ## FAQ
