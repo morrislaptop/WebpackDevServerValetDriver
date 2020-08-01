@@ -2,11 +2,11 @@
 
 require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
 
-class VueCliValetDriver extends WebpackDevServerBaseDriver
+class ExpressValetDriver extends WebpackDevServerBaseDriver
 {
     protected function getRunner()
     {
-        return 'npm run serve -- --port %s';
+        return 'PORT=%s npm start';
     }
 
     protected function getStaticFolder()
@@ -16,7 +16,7 @@ class VueCliValetDriver extends WebpackDevServerBaseDriver
 
     protected function getDevDependency()
     {
-        return '@vue/cli-service';
+        return 'express';
     }
 
     protected function filterDevContent($content)
