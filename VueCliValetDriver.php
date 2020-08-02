@@ -21,6 +21,6 @@ class VueCliValetDriver extends WebpackDevServerBaseDriver
 
     protected function filterDevContent($content)
     {
-        return $content;
+        return "";
     }
 }

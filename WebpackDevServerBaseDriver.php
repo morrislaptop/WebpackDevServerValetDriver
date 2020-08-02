@@ -20,7 +20,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Holds the URL to the dev server in background.
      */
-    protected $devServerHost = '127.0.0.1';
+    protected $devServerHost = 'localhost';
 
     /**
      * Interval of seconds to check if the server
@@ -50,6 +50,11 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
      * File path to store site names to pids.
      */
     protected $pids = __DIR__ . '/pids.json';
+
+    /**
+     * File path to request forworder.
+     */
+    protected $forworder = __DIR__ . '/RequestForworder.php';
 
     /**
      * Folder which contains static assets.
@@ -155,14 +160,30 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
             $this->log("$siteName Site Started");
         }
 
-        $page = $this->getFromDevServer($uri);
+        // $page = $this->getFromDevServer($uri);
 
-        $content = $this->filterDevContent($page['content']);
+        
+        $content = file_get_contents($this->forworder);
+        
+        $site_domain = "{$this->devServerHost}:{$this->port}";
+        
+        $site_uri = "{$this->devServerHost}:{$this->port}";
+        
+        $content = str_replace("----site_url----", $site_uri, $content);
+        $content = str_replace("----site_domain----", $site_domain, $content);
+        $content = str_replace("----site_name----", $siteName, $content);
 
-        $tmp = tempnam(sys_get_temp_dir(), 'valet');
-        file_put_contents($tmp, $content);
+        $content = str_replace("/* filterDevContent */",$this->filterDevContent($content),$content);
+        
+        // $tmp = tempnam(sys_get_temp_dir(), $siteName);
 
-        array_map('header', $page['headers']);
+        $tmp = "{$sitePath}/valet.php";
+        
+        file_put_contents($tmp,$content);
+
+        // file_put_contents($tmp, $site_uri);
+
+        // array_map('header', $page['headers']);
 
         return $tmp;
     }
