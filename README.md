@@ -2,7 +2,7 @@
 
 Custom driver for [Laravel Valet](https://laravel.com/docs/master/valet).
 
-Works with Vue, Poi 9, Poi 10 and more!
+Works with Express, Vue, Poi 9, Poi 10 and more!
 
 ## What is this?
 

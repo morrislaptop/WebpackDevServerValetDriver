@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__.'/WebpackDevServerBaseDriver.php';
+require_once __DIR__ . '/WebpackDevServerBaseDriver.php';
 
 class VueCliValetDriver extends WebpackDevServerBaseDriver
 {
@@ -21,6 +21,6 @@ class VueCliValetDriver extends WebpackDevServerBaseDriver
 
     protected function filterDevContent($content)
     {
-        return str_replace('/app.js', "//{$this->devServerHost}:{$this->port}/app.js", $content);
+        return "";
     }
 }

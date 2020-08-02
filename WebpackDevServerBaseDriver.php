@@ -20,7 +20,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Holds the URL to the dev server in background.
      */
-    protected $devServerHost = '127.0.0.1';
+    protected $devServerHost = 'localhost';
 
     /**
      * Interval of seconds to check if the server
@@ -39,17 +39,22 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     /**
      * Log file for debugging.
      */
-    protected $log = __DIR__.'/log';
+    protected $log = __DIR__ . '/log';
 
     /**
      * Log file for output.
      */
-    protected $out = __DIR__.'/out';
+    protected $out = __DIR__ . '/out';
 
     /**
      * File path to store site names to pids.
      */
-    protected $pids = __DIR__.'/pids.json';
+    protected $pids = __DIR__ . '/pids.json';
+
+    /**
+     * File path to request forworder.
+     */
+    protected $forworder = __DIR__ . '/RequestForworder.php';
 
     /**
      * Folder which contains static assets.
@@ -89,7 +94,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
      */
     protected function log($var)
     {
-        error_log((new DateTime())->format('y:m:d h:i:s').': '.var_export($var, true)."\n", 3, $this->log);
+        error_log((new DateTime())->format('y:m:d h:i:s') . ': ' . var_export($var, true) . "\n", 3, $this->log);
     }
 
     /**
@@ -107,11 +112,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         $this->siteName = $siteName;
         $this->port = $this->getPort();
 
-        if (!$this->isWebpackDevServerSite()) {
-            return false;
-        }
-
-        return true;
+        return ($this->isWebpackDevServerSite() || $this->isWebpackServerSite());
     }
 
     /**
@@ -150,21 +151,39 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         if ($this->wantsToRestart($uri)) {
             $this->stopServer();
             header("Location: $uri");
+            $this->log("$siteName Site Stoped");
             exit;
         }
 
         if (!$this->isServerRunning()) {
             $this->startServer();
+            $this->log("$siteName Site Started");
         }
 
-        $page = $this->getFromDevServer($uri);
+        // $page = $this->getFromDevServer($uri);
 
-        $content = $this->filterDevContent($page['content']);
+        
+        $content = file_get_contents($this->forworder);
+        
+        $site_domain = "{$this->devServerHost}:{$this->port}";
+        
+        $site_uri = "{$this->devServerHost}:{$this->port}";
+        
+        $content = str_replace("----site_url----", $site_uri, $content);
+        $content = str_replace("----site_domain----", $site_domain, $content);
+        $content = str_replace("----site_name----", $siteName, $content);
 
-        $tmp = tempnam(sys_get_temp_dir(), 'valet');
-        file_put_contents($tmp, $content);
+        $content = str_replace("/* filterDevContent */",$this->filterDevContent($content),$content);
+        
+        // $tmp = tempnam(sys_get_temp_dir(), $siteName);
 
-        array_map('header', $page['headers']);
+        $tmp = "{$sitePath}/valet.php";
+        
+        file_put_contents($tmp,$content);
+
+        // file_put_contents($tmp, $site_uri);
+
+        // array_map('header', $page['headers']);
 
         return $tmp;
     }
@@ -176,7 +195,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
 
     protected function isWebpackDevServerSite()
     {
-        $path = $this->sitePath.'/package.json';
+        $path = $this->sitePath . '/package.json';
 
         if (!file_exists($path)) {
             return false;
@@ -192,6 +211,26 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         $version = $this->getDevDependencyVersionPattern();
 
         return preg_match($version, $package->devDependencies->$dep);
+    }
+
+    protected function isWebpackServerSite()
+    {
+        $path = $this->sitePath . '/package.json';
+
+        if (!file_exists($path)) {
+            return false;
+        }
+
+        $package = json_decode(file_get_contents($path));
+
+        $dep = $this->getDevDependency();
+        if (empty($package->dependencies->$dep)) {
+            return false;
+        }
+
+        $version = $this->getDevDependencyVersionPattern();
+
+        return preg_match($version, $package->dependencies->$dep);
     }
 
     /**
@@ -229,7 +268,7 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
         chdir($this->sitePath);
 
         // Set PATH manually so it can find node?
-        putenv('PATH=/usr/local/bin:/bin');
+        putenv('PATH=/usr/bin:/bin');
 
         $command = sprintf($this->getRunner(), $this->port);
         $append = false;
@@ -319,11 +358,14 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     public function stopProcess($pid)
     {
         try {
-            $result = shell_exec(sprintf('kill %d 2>&1', $pid));
-            if (!preg_match('/No such process/', $result)) {
+            // $this->log(sprintf('kill %d 2>&1', $pid));
+            $this->log(sprintf("kill `pstree -p %d | sed 's/(/\\n(/g' | grep '(' | sed 's/(\(.*\)).*/\\1/' | tr \"\\n\" \" \"` 2>&1", $pid));
+            $result = shell_exec(sprintf("kill `pstree -p %d | sed 's/(/\\n(/g' | grep '(' | sed 's/(\(.*\)).*/\\1/' | tr \"\\n\" \" \"` 2>&1", $pid));
+            if (!preg_match('no such process', $result)) {
                 return true;
             }
         } catch (Exception $e) {
+            $this->log($e->getMessage());
         }
 
         return false;
@@ -352,12 +394,17 @@ abstract class WebpackDevServerBaseDriver extends ValetDriver
     {
         $uri = "http://{$this->devServerHost}:{$this->port}{$uri}";
 
-        $context = stream_context_create(['http' => ['header' => 'Accept: */*']]);
+        $context = stream_context_create(
+            ['http' => [
+                "ignore_errors" => true,
+                'header' => 'Accept: */*'
+            ]]
+        );
         $content = @file_get_contents($uri, false, $context);
 
-        if (!$content) {
-            throw new Exception('Failed to get page from dev server');
-        }
+        // if (!$content) {
+        //     throw new Exception('Failed to get page from dev server');
+        // }
 
         return ['content' => $content, 'headers' => $http_response_header];
     }
